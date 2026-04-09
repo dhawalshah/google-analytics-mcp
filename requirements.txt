@@ -1,0 +1,20 @@
+# Core MCP framework
+fastmcp>=2.0.0
+
+# Web server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+starlette>=0.36.0
+itsdangerous>=2.1.0   # needed by SessionMiddleware
+
+# Google Auth
+google-auth>=2.28.0
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+requests>=2.31.0
+
+# Firestore (token storage)
+google-cloud-firestore>=2.14.0
+
+# Environment variables
+python-dotenv>=1.0.0
