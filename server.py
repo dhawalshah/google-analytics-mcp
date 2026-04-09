@@ -550,6 +550,239 @@ def get_device_metrics(
         raise
 
 @mcp.tool
+def get_realtime_users(
+    property_id: str,
+    dimensions: Optional[List[str]] = None,
+    ctx: Context = None
+) -> Dict[str, Any]:
+    """Get active users in the last 30 minutes from Google Analytics 4.
+
+    This uses the Realtime API — a different endpoint from standard reports.
+    Data reflects activity within the last 30 minutes only; no date range applies.
+
+    Args:
+        property_id: Google Analytics 4 property ID (numeric, e.g., "123456789")
+        dimensions: Dimensions to break down by (optional, defaults to ["unifiedScreenName"])
+                   Other useful values: "country", "deviceCategory", "eventName"
+
+    Returns:
+        Active user counts per dimension value for the last 30 minutes
+    """
+    if ctx:
+        ctx.info(f"Getting realtime users for property {property_id}...")
+
+    try:
+        headers = get_headers_with_auto_token()
+
+        url = f"https://analyticsdata.googleapis.com/v1beta/properties/{property_id}:runRealtimeReport"
+
+        payload = {
+            "metrics": [{"name": "activeUsers"}]
+        }
+
+        if dimensions and len(dimensions) > 0:
+            payload["dimensions"] = [{"name": dim} for dim in dimensions]
+        else:
+            payload["dimensions"] = [{"name": "unifiedScreenName"}]
+
+        response = requests.post(url, headers=headers, json=payload)
+
+        if not response.ok:
+            if ctx:
+                ctx.error(f"Google Analytics Realtime API error: {response.status_code} {response.reason}")
+            raise Exception(f"Google Analytics Realtime API error: {response.status_code} {response.reason} - {response.text}")
+
+        results = response.json()
+
+        if not results.get("rows") or len(results.get("rows", [])) == 0:
+            message = f"No active users in the last 30 minutes for property {property_id}"
+            if ctx:
+                ctx.info(message)
+            return {"message": message, "activeUsers": 0}
+
+        if ctx:
+            ctx.info(f"Found {len(results.get('rows', []))} active user segments in realtime data.")
+
+        return results
+
+    except Exception as e:
+        if ctx:
+            ctx.error(f"Error getting realtime users: {str(e)}")
+        raise
+
+@mcp.tool
+def get_property_metadata(
+    property_id: str,
+    ctx: Context = None
+) -> Dict[str, Any]:
+    """List all valid dimensions and metrics available for a Google Analytics 4 property.
+
+    Use this before calling run_report to discover which metric and dimension names
+    are valid for a specific property. Different properties may have custom dimensions
+    and metrics in addition to the standard GA4 ones.
+
+    Args:
+        property_id: Google Analytics 4 property ID (numeric, e.g., "123456789")
+
+    Returns:
+        Two lists — available dimensions and available metrics — each with name and description
+    """
+    if ctx:
+        ctx.info(f"Fetching metadata for property {property_id}...")
+
+    try:
+        headers = get_headers_with_auto_token()
+
+        url = f"https://analyticsdata.googleapis.com/v1beta/properties/{property_id}/metadata"
+
+        response = requests.get(url, headers=headers)
+
+        if not response.ok:
+            if ctx:
+                ctx.error(f"Google Analytics Metadata API error: {response.status_code} {response.reason}")
+            raise Exception(f"Google Analytics Metadata API error: {response.status_code} {response.reason} - {response.text}")
+
+        data = response.json()
+
+        dimensions = [
+            {
+                "name": d.get("apiName", ""),
+                "description": d.get("description", ""),
+                "uiName": d.get("uiName", ""),
+                "customDefinition": d.get("customDefinition", False),
+            }
+            for d in data.get("dimensions", [])
+        ]
+
+        metrics = [
+            {
+                "name": m.get("apiName", ""),
+                "description": m.get("description", ""),
+                "uiName": m.get("uiName", ""),
+                "type": m.get("type", ""),
+                "customDefinition": m.get("customDefinition", False),
+            }
+            for m in data.get("metrics", [])
+        ]
+
+        if ctx:
+            ctx.info(f"Found {len(dimensions)} dimensions and {len(metrics)} metrics for property {property_id}.")
+
+        return {
+            "property_id": property_id,
+            "dimensionCount": len(dimensions),
+            "metricCount": len(metrics),
+            "dimensions": dimensions,
+            "metrics": metrics,
+        }
+
+    except Exception as e:
+        if ctx:
+            ctx.error(f"Error fetching property metadata: {str(e)}")
+        raise
+
+@mcp.tool
+def run_funnel_report(
+    property_id: str,
+    start_date: str,
+    end_date: str,
+    steps: List[Dict[str, Any]],
+    breakdown_dimension: Optional[str] = None,
+    ctx: Context = None
+) -> Dict[str, Any]:
+    """Run a funnel analysis report for a Google Analytics 4 property.
+
+    WARNING: EXPERIMENTAL: This uses the GA4 Data API v1alpha endpoint which is unstable
+    and may break or change without notice.
+
+    A funnel shows how many users complete each step in a sequence — e.g.
+    homepage -> product page -> add to cart -> purchase.
+
+    Each step in `steps` must be a dict with:
+      - "name": human-readable step label (e.g. "Homepage")
+      - "filterExpression": a GA4 funnel filter expression dict
+
+    STEP FORMAT EXAMPLES:
+
+    Page path step:
+    {
+      "name": "Homepage",
+      "filterExpression": {
+        "funnelFieldFilter": {
+          "fieldName": "pagePath",
+          "stringFilter": {"matchType": "EXACT", "value": "/"}
+        }
+      }
+    }
+
+    Event step:
+    {
+      "name": "Purchase",
+      "filterExpression": {
+        "funnelEventFilter": {
+          "eventName": "purchase"
+        }
+      }
+    }
+
+    Args:
+        property_id: Google Analytics 4 property ID (numeric, e.g., "123456789")
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+        steps: List of funnel step dicts (minimum 2 steps)
+        breakdown_dimension: Optional dimension to break down funnel by (e.g. "deviceCategory")
+
+    Returns:
+        Funnel step data showing user counts and drop-off at each stage
+    """
+    if ctx:
+        ctx.info(f"Running funnel report for property {property_id} ({len(steps)} steps)...")
+        ctx.warning("Note: runFunnelReport is a v1alpha (experimental) endpoint and may change.")
+
+    try:
+        if not steps or len(steps) < 2:
+            raise ValueError("steps must contain at least 2 funnel steps")
+
+        headers = get_headers_with_auto_token()
+
+        # v1alpha — experimental endpoint
+        url = f"https://analyticsdata.googleapis.com/v1alpha/properties/{property_id}:runFunnelReport"
+
+        payload = {
+            "dateRanges": [{"startDate": start_date, "endDate": end_date}],
+            "funnel": {
+                "steps": steps
+            },
+        }
+
+        if breakdown_dimension:
+            payload["funnelBreakdown"] = {
+                "breakdownDimension": {"dimensionName": breakdown_dimension}
+            }
+
+        response = requests.post(url, headers=headers, json=payload)
+
+        if not response.ok:
+            if ctx:
+                ctx.error(f"GA4 Funnel API error: {response.status_code} {response.reason}")
+            raise Exception(
+                f"GA4 Funnel API error: {response.status_code} {response.reason} - {response.text}\n"
+                "Note: runFunnelReport is experimental (v1alpha) and requires the property to have sufficient data."
+            )
+
+        results = response.json()
+
+        if ctx:
+            ctx.info("Funnel report completed.")
+
+        return results
+
+    except Exception as e:
+        if ctx:
+            ctx.error(f"Error running funnel report: {str(e)}")
+        raise
+
+@mcp.tool
 def run_report(
     property_id: str,
     start_date: str,
