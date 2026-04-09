@@ -1,16 +1,14 @@
 {
   "dxt_version": "0.1",
-  "name": "google-analytics-mcp-server",
-  "display_name": "Google Analytics MCP Server",
-  "version": "0.1.0",
+  "name": "google-analytics-mcp",
+  "display_name": "Google Analytics MCP",
+  "version": "0.2.0",
   "description": "A Python MCP server for Google Analytics 4 API integration with OAuth 2.0 authentication",
-  "long_description": "This extension provides comprehensive Google Analytics 4 reporting and analysis capabilities through a Python MCP server. It enables programmatic access to GA4 data including property management, page views, user metrics, events, traffic sources, device analytics, and comprehensive custom reporting through the Google Analytics Data API and Admin API with automatic OAuth 2.0 authentication and token refresh.",
+  "long_description": "Connect Claude (or any MCP-compatible AI client) directly to your Google Analytics 4 properties. Supports historical reporting, real-time users, funnel analysis, property metadata, traffic sources, device metrics, and fully custom reports. Runs locally via STDIO (no cloud required) or as a shared team server on Google Cloud Run.",
   "author": {
-    "name": "GoMarble AI",
-    "email": "support@gomarble.ai",
-    "url": "https://github.com/gomarble-ai"
+    "name": "Dhawal Shah",
+    "url": "https://github.com/dhawalshah"
   },
-  "icon": "favicon.png",
   "server": {
     "type": "python",
     "entry_point": "server.py",
@@ -20,7 +18,8 @@
         "${__dirname}/server.py"
       ],
       "env": {
-        "GOOGLE_ANALYTICS_OAUTH_CONFIG_PATH": "${user_config.oauth_config_path}",
+        "OAUTH_CONFIG_PATH": "${user_config.oauth_config_path}",
+        "MCP_USER_EMAIL": "${user_config.mcp_user_email}",
         "PYTHONPATH": "${__dirname}/lib"
       },
       "cwd": "${__dirname}"
@@ -29,37 +28,49 @@
   "tools": [
     {
       "name": "list_properties",
-      "description": "List all Google Analytics 4 accounts with their associated properties in a hierarchical structure"
+      "description": "List all Google Analytics 4 accounts with their associated properties"
     },
     {
       "name": "get_page_views",
-      "description": "Get page view metrics for a specific date range from Google Analytics 4"
+      "description": "Get page view metrics for a date range"
     },
     {
       "name": "get_active_users",
-      "description": "Get active users metrics for a specific date range from Google Analytics 4"
+      "description": "Get active user metrics for a date range"
     },
     {
       "name": "get_events",
-      "description": "Get event metrics for a specific date range from Google Analytics 4"
+      "description": "Get event metrics for a date range"
     },
     {
       "name": "get_traffic_sources",
-      "description": "Get traffic source metrics for a specific date range from Google Analytics 4"
+      "description": "Get traffic source breakdown for a date range"
     },
     {
       "name": "get_device_metrics",
-      "description": "Get device metrics for a specific date range from Google Analytics 4"
+      "description": "Get device category metrics for a date range"
+    },
+    {
+      "name": "get_realtime_users",
+      "description": "Get active users in the last 30 minutes (Realtime API)"
+    },
+    {
+      "name": "get_property_metadata",
+      "description": "List all valid dimensions and metrics available for a property"
+    },
+    {
+      "name": "run_funnel_report",
+      "description": "Run a multi-step funnel analysis report (experimental v1alpha)"
     },
     {
       "name": "run_report",
-      "description": "Execute comprehensive Google Analytics 4 reports with full customization capabilities"
+      "description": "Execute a fully custom GA4 report with any metrics and dimensions"
     }
   ],
   "resources": [
     {
       "name": "ga4://reference",
-      "description": "Google Analytics 4 API reference documentation with metrics, dimensions, and examples"
+      "description": "Google Analytics 4 API reference — metrics, dimensions, and examples"
     }
   ],
   "keywords": [
@@ -74,6 +85,8 @@
     "users",
     "pageviews",
     "events",
+    "realtime",
+    "funnel",
     "oauth"
   ],
   "license": "MIT",
@@ -81,7 +94,14 @@
     "oauth_config_path": {
       "type": "string",
       "title": "OAuth Configuration Path",
-      "description": "Full path to your Google Cloud OAuth 2.0 client credentials JSON file for Google Analytics API access",
+      "description": "Full path to your Google Cloud OAuth 2.0 client credentials JSON file",
+      "required": true,
+      "sensitive": false
+    },
+    "mcp_user_email": {
+      "type": "string",
+      "title": "Your Google Account Email",
+      "description": "Your Google account email — used to identify your stored credentials",
       "required": true,
       "sensitive": false
     }
@@ -97,4 +117,4 @@
       "python": ">=3.10.0 <4"
     }
   }
-} 
+}
