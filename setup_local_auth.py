@@ -12,7 +12,6 @@ Requirements:
     OAUTH_CONFIG_PATH env var (or ./client_secret.json by default)
 """
 
-import json
 import os
 import threading
 import webbrowser
