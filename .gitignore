@@ -1,9 +1,15 @@
 # Environment
 .env
 
+# OAuth credentials (never commit real credentials)
+client_secret.json
+*_token.json
 
 # Python
 __pycache__/
 *.pyc
 .venv/
 lib/
+
+# macOS
+.DS_Store
