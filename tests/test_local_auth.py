@@ -24,7 +24,7 @@ def test_get_headers_uses_firestore_when_context_var_is_set():
     assert headers["Authorization"] == "Bearer firestore-token"
 
 
-def test_get_headers_uses_local_token_when_env_var_set(tmp_path):
+def test_get_headers_uses_local_token_when_env_var_set():
     """STDIO local mode: MCP_USER_EMAIL env var → local token file."""
     from oauth.google_auth import get_headers_with_auto_token
 
