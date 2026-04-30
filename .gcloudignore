@@ -1,4 +1,4 @@
-# Cloud Run build ignore — extends .gitignore but keeps client_secret.json
+# Cloud Run build ignore
 .gcloudignore
 .git
 .gitignore
@@ -10,3 +10,6 @@ lib/
 *.json.bak
 docs/
 tests/
+
+# Secret is mounted from Secret Manager at runtime — never bake into image
+client_secret.json
