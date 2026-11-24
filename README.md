@@ -1,5 +1,7 @@
 # Google Analytics MCP
 
+[![dhawalshah/google-analytics-mcp MCP server](https://glama.ai/mcp/servers/dhawalshah/google-analytics-mcp/badges/score.svg)](https://glama.ai/mcp/servers/dhawalshah/google-analytics-mcp)
+
 A Model Context Protocol (MCP) server for Google Analytics 4. Connect Claude (or any MCP-compatible AI client) directly to your GA4 properties to query traffic, analyse user behaviour, inspect events, run funnel analysis, and more — all in natural language.
 
 The server speaks the [MCP authorization spec (2025-06-18)](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization), so it works as a remote connector anywhere Claude supports custom MCP servers — claude.ai (personal), Claude Desktop, and Claude Teams. Add **one URL**, click "Connect", sign in with Google, done. For a Teams plan, the org owner adds the URL once and each member individually authenticates on first use.
